@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Projeto</string>
+    <string name="title_activity_maps">MapsActivity</string>
+    <string name="nome">Nome</string>
+    <string name="email">E-mail</string>
+    <string name="senha">Senha</string>
+    <string name="login_button">Realizar Login</string>
+    <string name="signup_button">Realizar Cadastro</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+</resources>
