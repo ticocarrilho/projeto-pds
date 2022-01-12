@@ -19,6 +19,7 @@ import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import androidx.appcompat.widget.Toolbar;
@@ -59,7 +60,7 @@ public class MapsActivity extends AppCompatActivity {
         this.fabSetup();
 
         getIntent().putExtra("addBanheiroSubject", addBanheiroSubject);
-        this.setFragmentView(MapsFragment.class);
+        this.setFragmentView(MapsFragment.class, "Maps");
     }
 
     private void toolbarSetup() {
@@ -96,16 +97,31 @@ public class MapsActivity extends AppCompatActivity {
     }
     private void showAddDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Title");
+        builder.setTitle("Digite o nome do Banheiro");
 
-        final EditText input = new EditText(this);
-        input.setInputType(InputType.TYPE_CLASS_TEXT);
-        builder.setView(input);
+        final EditText nomeInput = new EditText(this);
+        nomeInput.setHint("Nome do Estabelecimento");
+        nomeInput.setInputType(InputType.TYPE_CLASS_TEXT);
+
+        final EditText localInput = new EditText(this);
+        localInput.setHint("Local do Estabelecimento");
+        localInput.setInputType(InputType.TYPE_CLASS_TEXT);
+
+        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        layoutParams.setMargins( 40,20,40,20);
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+
+        layout.addView(nomeInput);
+        layout.addView(localInput);
+        builder.setView(layout);
 
         builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                MapsActivity.this.addBanheiroSubject.setNome(input.getText().toString());
+                MapsActivity.this.addBanheiroSubject.setNome(nomeInput.getText().toString());
             }
         });
         builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -120,28 +136,32 @@ public class MapsActivity extends AppCompatActivity {
 
     public void selectDrawerItem(MenuItem menuItem) {
         Class fragmentClass = MapsFragment.class;
+        String fragmentTag = null;
         switch(menuItem.getItemId()) {
             case R.id.nav_inicio_fragment:
                 fragmentClass = MapsFragment.class;
+                fragmentTag = "Maps";
                 this.fab.show();
                 break;
             case R.id.nav_login_fragment:
                 fragmentClass = LoginFragment.class;
+                fragmentTag = "Login";
                 this.fab.hide();
                 break;
             case R.id.nav_cadastro_fragment:
                 fragmentClass = CadastroFragment.class;
+                fragmentTag = "Cadastro";
                 this.fab.hide();
                 break;
         }
 
-        setFragmentView(fragmentClass);
+        setFragmentView(fragmentClass, fragmentTag);
 
         setTitle(menuItem.getTitle());
         mDrawer.closeDrawers();
     }
 
-    private void setFragmentView(Class fragmentClass) {
+    private void setFragmentView(Class fragmentClass, String fragmentTag) {
         Fragment fragment = null;
         try {
             fragment = (Fragment) fragmentClass.newInstance();
@@ -150,7 +170,22 @@ public class MapsActivity extends AppCompatActivity {
         }
 
         FragmentManager fragmentManager = getSupportFragmentManager();
-        fragmentManager.beginTransaction().replace(R.id.flContent, fragment).commit();
+        if(fragmentTag.equals("Maps")) {
+            fragmentManager.beginTransaction().replace(R.id.flContent, fragment, fragmentTag).commit();
+        } else {
+            fragmentManager.beginTransaction().replace(R.id.flContent, fragment, fragmentTag).addToBackStack("Maps").commit();
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        FragmentManager fragmentManager = getSupportFragmentManager();
+
+        if (fragmentManager.getBackStackEntryCount() > 0) {
+            fragmentManager.popBackStack();
+        } else {
+            super.onBackPressed();
+        }
     }
 
     @Override

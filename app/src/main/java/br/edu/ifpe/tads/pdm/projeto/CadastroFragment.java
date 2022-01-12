@@ -1,5 +1,6 @@
 package br.edu.ifpe.tads.pdm.projeto;
 
+import android.app.Activity;
 import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
@@ -7,6 +8,12 @@ import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Toast;
+
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.firebase.auth.FirebaseAuth;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -55,10 +62,37 @@ public class CadastroFragment extends Fragment {
         }
     }
 
+    public void buttonSignUpClick(View view) {
+        String email = ((EditText) getView().findViewById(R.id.email_input)).getText().toString();
+        String senha = ((EditText) getView().findViewById(R.id.senha_input)).getText().toString();
+
+        FirebaseAuth mAuth = FirebaseAuth.getInstance();
+        mAuth.createUserWithEmailAndPassword(email, senha)
+                .addOnCompleteListener((Activity) getContext(), task -> {
+                    if (task.isSuccessful()) {
+                        getActivity().onBackPressed();
+                    } else {
+                        Toast.makeText(getContext(), "SIGN UP ERROR!",
+                                Toast.LENGTH_SHORT).show();
+                    }
+
+                });
+    }
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_cadastro, container, false);
+
+        View view = inflater.inflate(R.layout.fragment_cadastro, container, false);
+
+        Button signupButton = view.findViewById(R.id.signup_button);
+        signupButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                buttonSignUpClick(view);
+            }
+        });
+        return view;
     }
 }
