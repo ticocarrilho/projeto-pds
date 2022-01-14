@@ -29,8 +29,18 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+
+import java.util.ArrayList;
 
 import br.edu.ifpe.tads.pdm.projeto.interfaces.AddBanheiroObserver;
+import br.edu.ifpe.tads.pdm.projeto.models.Banheiro;
+import br.edu.ifpe.tads.pdm.projeto.models.CustomLatLng;
 
 public class MapsFragment extends Fragment implements AddBanheiroObserver, OnMapReadyCallback {
 
@@ -38,7 +48,8 @@ public class MapsFragment extends Fragment implements AddBanheiroObserver, OnMap
     private int FINE_LOCATION_REQUEST = 2;
     private GoogleMap mMap;
     private AddBanheiroSubject addBanheiroSubject;
-    private String banheiroNome;
+    private Banheiro banheiro;
+    private DatabaseReference banheirosDr;
 
     @Nullable
     @Override
@@ -60,14 +71,15 @@ public class MapsFragment extends Fragment implements AddBanheiroObserver, OnMap
         addBanheiroSubject = (AddBanheiroSubject) i.getSerializableExtra("addBanheiroSubject");
         this.addBanheiroSubject.attach(this);
 
+        FirebaseDatabase fbDB = FirebaseDatabase.getInstance();
+        banheirosDr = fbDB.getReference("banheiros");
+
         return mView;
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-//        SupportMapFragment mapFragment =
-//                (SupportMapFragment) getChildFragmentManager().findFragmentById(R.id.map);
 
     }
 
@@ -79,12 +91,14 @@ public class MapsFragment extends Fragment implements AddBanheiroObserver, OnMap
         mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
             public void onMapClick(LatLng latLng) {
-                if(banheiroNome != null) {
-                    mMap.addMarker(new MarkerOptions().
-                            position(latLng).
-                            title(banheiroNome).
-                            icon(BitmapDescriptorFactory.defaultMarker(0)));
-                    banheiroNome = null;
+                if(banheiro != null) {
+                    banheiro.setLatLng(latLng);
+//                    mMap.addMarker(new MarkerOptions().
+//                            position(latLng).
+//                            title(banheiro.getLocal()).
+//                            icon(BitmapDescriptorFactory.defaultMarker(0)));
+                    banheirosDr.push().setValue(banheiro);
+                    banheiro = null;
                 }
             }
         });
@@ -101,6 +115,8 @@ public class MapsFragment extends Fragment implements AddBanheiroObserver, OnMap
             goToCurrentLocation();
         }
 
+        banheiroListener();
+
     }
 
     private void goToCurrentLocation() {
@@ -112,6 +128,32 @@ public class MapsFragment extends Fragment implements AddBanheiroObserver, OnMap
                 LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15));
             }
+        });
+    }
+
+    public void banheiroListener() {
+        banheirosDr.addChildEventListener(new ChildEventListener() {
+            @Override
+            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                Banheiro banheiro = dataSnapshot.getValue(Banheiro.class);
+                if (banheiro != null) {
+                    CustomLatLng customLatLng = banheiro.getCustomLatLng();
+                    LatLng latLng = new LatLng(customLatLng.getLatitude(), customLatLng.getLongitude());
+                    mMap.addMarker(new MarkerOptions().
+                            position(latLng).
+                            title(banheiro.getLocal()).
+                            snippet(banheiro.getTipo()).
+                            icon(BitmapDescriptorFactory.defaultMarker(0)));
+                }
+            }
+            @Override
+            public void onChildChanged(DataSnapshot dataSnapshot, String s) { }
+            @Override
+            public void onChildRemoved(DataSnapshot dataSnapshot) { }
+            @Override
+            public void onChildMoved(DataSnapshot dataSnapshot, String s) { }
+            @Override
+            public void onCancelled(DatabaseError databaseError) { }
         });
     }
 
@@ -130,6 +172,6 @@ public class MapsFragment extends Fragment implements AddBanheiroObserver, OnMap
 
     @Override
     public void addBanheiro() {
-        this.banheiroNome = this.addBanheiroSubject.getNome();
+        this.banheiro = this.addBanheiroSubject.getBanheiro();
     }
 }

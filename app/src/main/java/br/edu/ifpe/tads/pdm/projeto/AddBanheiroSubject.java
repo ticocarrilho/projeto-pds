@@ -5,18 +5,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 import br.edu.ifpe.tads.pdm.projeto.interfaces.AddBanheiroObserver;
+import br.edu.ifpe.tads.pdm.projeto.models.Banheiro;
 
 public class AddBanheiroSubject implements Serializable {
     private static final long serialVersionUID = 1L;
     private List<AddBanheiroObserver> observers = new ArrayList<>();
-    private String nome;
+    private Banheiro banheiro;
 
-    public String getNome() {
-        return nome;
+    public Banheiro getBanheiro() {
+        return banheiro;
     }
 
-    public void setNome(String nome) {
-        this.nome = nome;
+    public void setBanheiro(String local, String tipo) {
+        this.banheiro = new Banheiro(local, tipo);
         notifyAllObservers();
     }
 

@@ -71,8 +71,10 @@ public class CadastroFragment extends Fragment {
                 .addOnCompleteListener((Activity) getContext(), task -> {
                     if (task.isSuccessful()) {
                         getActivity().onBackPressed();
+                        Toast.makeText(getContext(), "Cadastro realizado com sucesso.",
+                                Toast.LENGTH_SHORT).show();
                     } else {
-                        Toast.makeText(getContext(), "SIGN UP ERROR!",
+                        Toast.makeText(getContext(), "Erro ao realizar cadastro.",
                                 Toast.LENGTH_SHORT).show();
                     }
 

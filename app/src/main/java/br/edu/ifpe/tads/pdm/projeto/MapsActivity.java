@@ -97,15 +97,15 @@ public class MapsActivity extends AppCompatActivity {
     }
     private void showAddDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Digite o nome do Banheiro");
-
-        final EditText nomeInput = new EditText(this);
-        nomeInput.setHint("Nome do Estabelecimento");
-        nomeInput.setInputType(InputType.TYPE_CLASS_TEXT);
+        builder.setTitle("Informações do Banheiro");
 
         final EditText localInput = new EditText(this);
-        localInput.setHint("Local do Estabelecimento");
+        localInput.setHint("Local do Banheiro");
         localInput.setInputType(InputType.TYPE_CLASS_TEXT);
+
+        final EditText tipoInput = new EditText(this);
+        tipoInput.setHint("Tipo do Banheiro");
+        tipoInput.setInputType(InputType.TYPE_CLASS_TEXT);
 
         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -114,17 +114,17 @@ public class MapsActivity extends AppCompatActivity {
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
 
-        layout.addView(nomeInput);
         layout.addView(localInput);
+        layout.addView(tipoInput);
         builder.setView(layout);
 
-        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+        builder.setPositiveButton("Criar", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                MapsActivity.this.addBanheiroSubject.setNome(nomeInput.getText().toString());
+                MapsActivity.this.addBanheiroSubject.setBanheiro(localInput.getText().toString(), tipoInput.getText().toString());
             }
         });
-        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+        builder.setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 dialog.cancel();
