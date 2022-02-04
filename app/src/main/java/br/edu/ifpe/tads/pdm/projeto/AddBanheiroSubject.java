@@ -16,8 +16,8 @@ public class AddBanheiroSubject implements Serializable {
         return banheiro;
     }
 
-    public void setBanheiro(String local, String tipo) {
-        this.banheiro = new Banheiro(local, tipo);
+    public void setBanheiro(String local, String tipo, String preco, float avalicao, int qntAvalicaoes, boolean fraldario) {
+        this.banheiro = new Banheiro(local, tipo, preco, avalicao, qntAvalicaoes, fraldario);
         notifyAllObservers();
     }
 

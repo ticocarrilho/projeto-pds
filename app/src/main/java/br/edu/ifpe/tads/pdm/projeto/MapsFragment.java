@@ -7,15 +7,24 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import android.Manifest;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.InputType;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -27,7 +36,9 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
@@ -37,6 +48,8 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import br.edu.ifpe.tads.pdm.projeto.interfaces.AddBanheiroObserver;
 import br.edu.ifpe.tads.pdm.projeto.models.Banheiro;
@@ -50,6 +63,7 @@ public class MapsFragment extends Fragment implements AddBanheiroObserver, OnMap
     private AddBanheiroSubject addBanheiroSubject;
     private Banheiro banheiro;
     private DatabaseReference banheirosDr;
+    private Map<Marker, String> banheirosIds = new HashMap<>();
 
     @Nullable
     @Override
@@ -93,10 +107,6 @@ public class MapsFragment extends Fragment implements AddBanheiroObserver, OnMap
             public void onMapClick(LatLng latLng) {
                 if(banheiro != null) {
                     banheiro.setLatLng(latLng);
-//                    mMap.addMarker(new MarkerOptions().
-//                            position(latLng).
-//                            title(banheiro.getLocal()).
-//                            icon(BitmapDescriptorFactory.defaultMarker(0)));
                     banheirosDr.push().setValue(banheiro);
                     banheiro = null;
                 }
@@ -116,7 +126,6 @@ public class MapsFragment extends Fragment implements AddBanheiroObserver, OnMap
         }
 
         banheiroListener();
-
     }
 
     private void goToCurrentLocation() {
@@ -136,18 +145,151 @@ public class MapsFragment extends Fragment implements AddBanheiroObserver, OnMap
             @Override
             public void onChildAdded(DataSnapshot dataSnapshot, String s) {
                 Banheiro banheiro = dataSnapshot.getValue(Banheiro.class);
+
                 if (banheiro != null) {
                     CustomLatLng customLatLng = banheiro.getCustomLatLng();
                     LatLng latLng = new LatLng(customLatLng.getLatitude(), customLatLng.getLongitude());
-                    mMap.addMarker(new MarkerOptions().
+                    float markerHue = BitmapDescriptorFactory.HUE_RED;
+                    String textoBanheiro = "Banheiro: " + banheiro.getTipo();
+
+                    if(banheiro.getTipo().equals("Privado")) {
+                        markerHue = BitmapDescriptorFactory.HUE_YELLOW;
+                        textoBanheiro = textoBanheiro.concat("\nPreço: " + banheiro.getPreco());
+                    }
+                    if(banheiro.isFraldario()) {
+                        markerHue = BitmapDescriptorFactory.HUE_BLUE;
+                        textoBanheiro = textoBanheiro.concat("\nPossui fraldário disponível");
+                    }
+
+                    if(banheiro.getQntAvalicoes() == 0) {
+                        textoBanheiro = textoBanheiro.concat("\nNão avaliado");
+                    } else {
+                        textoBanheiro = textoBanheiro.concat("\nAvaliação: " + (banheiro.getAvaliacao()/banheiro.getQntAvalicoes()));
+                    }
+
+                    Marker marker = mMap.addMarker(new MarkerOptions().
                             position(latLng).
                             title(banheiro.getLocal()).
-                            snippet(banheiro.getTipo()).
-                            icon(BitmapDescriptorFactory.defaultMarker(0)));
+                            snippet(textoBanheiro + "\nClique na janela para avaliar").
+                            icon(BitmapDescriptorFactory.defaultMarker(markerHue)));
+
+                    banheirosIds.put(marker, dataSnapshot.getKey());
+
+                    mMap.setInfoWindowAdapter(new GoogleMap.InfoWindowAdapter() {
+
+                        @Override
+                        public View getInfoWindow(Marker arg0) {
+                            return null;
+                        }
+
+                        @Override
+                        public View getInfoContents(Marker marker) {
+
+                            LinearLayout info = new LinearLayout(getActivity());
+                            info.setOrientation(LinearLayout.VERTICAL);
+
+                            TextView title = new TextView(getActivity());
+                            title.setTextColor(Color.BLACK);
+                            title.setGravity(Gravity.CENTER);
+                            title.setTypeface(null, Typeface.BOLD);
+                            title.setText(marker.getTitle());
+
+                            TextView snippet = new TextView(getActivity());
+                            snippet.setTextColor(Color.GRAY);
+                            snippet.setText(marker.getSnippet());
+
+                            info.addView(title);
+                            info.addView(snippet);
+
+                            return info;
+                        }
+                    });
+
+                    mMap.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
+                        @Override
+                        public void onInfoWindowClick(Marker marker) {
+                            String banheiroId = banheirosIds.get(marker);
+
+                            DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference()
+                                    .child("banheiros");
+
+                            databaseReference.addListenerForSingleValueEvent (new ValueEventListener() {
+                                @Override
+                                public void onDataChange(DataSnapshot dataSnapshot) {
+                                    for (DataSnapshot child : dataSnapshot.getChildren()) {
+                                        if(child.getKey() == banheiroId) {
+                                            Banheiro banheiro = child.getValue(Banheiro.class);
+
+                                            AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+                                            builder.setTitle("Criação de Avaliação");
+
+                                            final EditText avaliacaoInput = new EditText(getContext());
+                                            avaliacaoInput.setHint("Avaliação");
+                                            avaliacaoInput.setInputType(InputType.TYPE_CLASS_NUMBER);
+
+                                            LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
+                                                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                                            layoutParams.setMargins( 40,20,40,20);
+
+                                            LinearLayout layout = new LinearLayout(getContext());
+                                            layout.setOrientation(LinearLayout.VERTICAL);
+
+                                            layout.addView(avaliacaoInput);
+                                            builder.setView(layout);
+
+                                            builder.setPositiveButton("Avaliar", new DialogInterface.OnClickListener() {
+                                                @Override
+                                                public void onClick(DialogInterface dialog, int which) {
+                                                    databaseReference.child(banheiroId).child("avaliacao").setValue(banheiro.getAvaliacao() + Float.valueOf(avaliacaoInput.getText().toString()));
+                                                    databaseReference.child(banheiroId).child("qntAvalicoes").setValue(banheiro.getQntAvalicoes() + 1);
+                                                }
+                                            });
+                                            builder.setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
+                                                @Override
+                                                public void onClick(DialogInterface dialog, int which) {
+                                                    dialog.cancel();
+                                                }
+                                            });
+
+                                            builder.show();
+                                        }
+                                    }
+                                }
+
+                                @Override
+                                public void onCancelled(DatabaseError databaseError) {}
+                            });
+                        }
+
+                    });
                 }
             }
             @Override
-            public void onChildChanged(DataSnapshot dataSnapshot, String s) { }
+            public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+                for (Map.Entry<Marker, String> entry : banheirosIds.entrySet()) {
+                    if (entry.getValue().equals(dataSnapshot.getKey())) {
+                        Banheiro banheiro = dataSnapshot.getValue(Banheiro.class);
+                        String textoBanheiro = "Banheiro: " + banheiro.getTipo();
+
+                        if(banheiro.getTipo().equals("Privado")) {
+                            textoBanheiro = textoBanheiro.concat("\nPreço: " + banheiro.getPreco());
+                        }
+                        if(banheiro.isFraldario()) {
+                            textoBanheiro = textoBanheiro.concat("\nPossui fraldário disponível");
+                        }
+
+                        if(banheiro.getQntAvalicoes() == 0) {
+                            textoBanheiro = textoBanheiro.concat("\nNão avaliado");
+                        } else {
+                            textoBanheiro = textoBanheiro.concat("\nAvaliação: " + (banheiro.getAvaliacao()/banheiro.getQntAvalicoes()));
+                        }
+
+                        entry.getKey().setSnippet(textoBanheiro + "\nClique na janela para avaliar");
+                        entry.getKey().hideInfoWindow();
+                        entry.getKey().showInfoWindow();
+                    }
+                }
+            }
             @Override
             public void onChildRemoved(DataSnapshot dataSnapshot) { }
             @Override

@@ -16,6 +16,7 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.text.InputType;
 import android.util.Log;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
@@ -36,6 +37,8 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 import br.edu.ifpe.tads.pdm.projeto.databinding.ActivityMapsBinding;
 
@@ -61,13 +64,34 @@ public class MapsActivity extends AppCompatActivity {
 
         getIntent().putExtra("addBanheiroSubject", addBanheiroSubject);
         this.setFragmentView(MapsFragment.class, "Maps");
+        FirebaseAuth mAuth = FirebaseAuth.getInstance();
+
+        mAuth.addAuthStateListener(new FirebaseAuth.AuthStateListener() {
+            @Override
+            public void onAuthStateChanged(@NonNull final FirebaseAuth firebaseAuth) {
+                FirebaseUser user = firebaseAuth.getCurrentUser();
+                NavigationView navigationView = (NavigationView) findViewById(R.id.navigationView);
+                Menu navMenu = navigationView.getMenu();
+
+                if (null != user) {
+                    fab.show();
+                    navMenu.findItem(R.id.nav_login_fragment).setVisible(false);
+                    navMenu.findItem(R.id.nav_cadastro_fragment).setVisible(false);
+                    navMenu.findItem(R.id.sair_button).setVisible(true);
+                } else {
+                    fab.hide();
+                    navMenu.findItem(R.id.nav_login_fragment).setVisible(true);
+                    navMenu.findItem(R.id.nav_cadastro_fragment).setVisible(true);
+                    navMenu.findItem(R.id.sair_button).setVisible(false);
+                }
+            }
+        });
     }
 
     private void toolbarSetup() {
         this.toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(this.toolbar);
         getSupportActionBar().setTitle(R.string.app_name);
-        getSupportActionBar().setHomeAsUpIndicator(R.drawable.common_google_signin_btn_text_light);
         getSupportActionBar().setHomeButtonEnabled(true);
     }
 
@@ -95,43 +119,11 @@ public class MapsActivity extends AppCompatActivity {
             }
         });
     }
+
     private void showAddDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Informações do Banheiro");
-
-        final EditText localInput = new EditText(this);
-        localInput.setHint("Local do Banheiro");
-        localInput.setInputType(InputType.TYPE_CLASS_TEXT);
-
-        final EditText tipoInput = new EditText(this);
-        tipoInput.setHint("Tipo do Banheiro");
-        tipoInput.setInputType(InputType.TYPE_CLASS_TEXT);
-
-        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        layoutParams.setMargins( 40,20,40,20);
-
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-
-        layout.addView(localInput);
-        layout.addView(tipoInput);
-        builder.setView(layout);
-
-        builder.setPositiveButton("Criar", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                MapsActivity.this.addBanheiroSubject.setBanheiro(localInput.getText().toString(), tipoInput.getText().toString());
-            }
-        });
-        builder.setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.cancel();
-            }
-        });
-
-        builder.show();
+        FragmentManager fm = getSupportFragmentManager();
+        AddBanheiroDialogFragment addBanheiroDialogFragment = AddBanheiroDialogFragment.newInstance(this.addBanheiroSubject);
+        addBanheiroDialogFragment.show(fm, "fragment_add_banheiro_dialog");
     }
 
     public void selectDrawerItem(MenuItem menuItem) {
@@ -153,11 +145,18 @@ public class MapsActivity extends AppCompatActivity {
                 fragmentTag = "Cadastro";
                 this.fab.hide();
                 break;
+            case R.id.sair_button:
+                FirebaseAuth mAuth = FirebaseAuth.getInstance();
+                mAuth.signOut();
+                break;
         }
 
-        setFragmentView(fragmentClass, fragmentTag);
+        if(fragmentTag != null) {
+            setFragmentView(fragmentClass, fragmentTag);
 
-        setTitle(menuItem.getTitle());
+            setTitle(menuItem.getTitle());
+        }
+
         mDrawer.closeDrawers();
     }
 
